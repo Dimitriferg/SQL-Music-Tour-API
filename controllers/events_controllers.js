@@ -1,34 +1,51 @@
-// Dependencies
 const events = require("express").Router();
 const db = require("../models");
-const { Event } = db;
-const { Op } = require("sequelize");
+const band = require("../models/band");
+const { Event, SetTime, Band, MeetGreet } = db;
 
-// Routes
-
-// Show
 events.get("/", async (req, res) => {
   try {
-    const foundEvents = await Event.findAll({
-      order: [["start_time", "ASC"]],
-      where: {
-        event_name: {
-          [Op.like]: `%${req.query.event_name ? req.query.event_name : ""}%`,
-        },
-      },
-    });
+    const foundEvents = await Event.findAll();
     res.status(200).json(foundEvents);
-  } catch (err) {
-    res.status(500).json(err);
+  } catch (error) {
+    res.status(500).json(error);
   }
 });
 
-// POST Create
+events.get("/:name", async (req, res) => {
+  try {
+    const foundEvent = await Event.findOne({
+      where: { event_name: req.params.name },
+      include: [
+        {
+          model: SetTime,
+          as: "set_times",
+          include: {
+            model: Band,
+            as: "bands",
+          },
+        },
+        {
+          model: MeetGreet,
+          as: "meet_greets",
+          // include: {
+          //     model: Band,
+          //     as: "bands"
+          // }
+        },
+      ],
+    });
+    res.status(200).json(foundEvent);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
 events.post("/", async (req, res) => {
   try {
     const newEvent = await Event.create(req.body);
     res.status(200).json({
-      message: "Created new event",
+      message: "Successfully inserted a new event",
       data: newEvent,
     });
   } catch (err) {
@@ -36,49 +53,34 @@ events.post("/", async (req, res) => {
   }
 });
 
-// UPDATE Put
 events.put("/:id", async (req, res) => {
   try {
-    const updatedEvent = Event.update(req.body, {
+    const updatedEvents = await Event.update(req.body, {
       where: {
         event_id: req.params.id,
       },
     });
     res.status(200).json({
-      message: `successfully updated ${updatedEvent} band(s)`,
+      message: `Successfully updated ${updatedEvents} event(s)`,
     });
   } catch (err) {
     res.status(500).json(err);
   }
 });
 
-// DELETE
 events.delete("/:id", async (req, res) => {
   try {
-    const deletedEvent = Event.destroy({
+    const deletedEvents = await Event.destroy({
       where: {
         event_id: req.params.id,
       },
     });
     res.status(200).json({
-      message: `deleted event ${deletedEvent}`,
+      message: `Successfully deleted ${deletedEvents} event(s)`,
     });
   } catch (err) {
     res.status(500).json(err);
   }
 });
 
-// Get single id
-events.get("/:id", async (req, res) => {
-  try {
-    const foundEvent = await Event.findOne({
-      where: { event_id: req.params.id },
-    });
-    res.status(200).json(foundEvent);
-  } catch (err) {
-    res.status(500).json(err);
-  }
-});
-
-// Export
 module.exports = events;
